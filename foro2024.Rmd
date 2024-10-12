@@ -1,0 +1,356 @@
+---
+title: "Construyendo Ciudades Costeras Resilientes con una Perspectiva Multinivel | Dashboard pre-evento (última actualización: `r format(Sys.time(), '%Y-%m-%d %H:%M')`)"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{css}
+.leaflet{ background-color: white; }
+```
+
+
+```{r setup, include=FALSE}
+last_data = "S123_3769958d57a3489da72ec785518b8341_EXCEL.xlsx"
+admin_layer = "limite_cantonal_conali_cne_2022_visval200m.geojson"
+
+library(flexdashboard)
+library(plotly)
+library(dplyr)
+library(tidyr)
+# library(knitr)
+# library(kableExtra)
+
+# Fake Data ####
+
+# # Set seed for reproducibility
+# set.seed(123)
+# 
+# # Define the possible values for each variable
+# names <- c("Alice Johnson", "Bob Smith", "Charlie Brown", "Diana Prince", "Evan Lee", 
+#            "Fiona Green", "George White", "Hannah Black", "Ian Gray", "Jane Doe", 
+#            "Kyle Red", "Liam Blue", "Mia Yellow", "Noah Purple", "Olivia Orange", 
+#            "Paul Pink", "Quinn Teal", "Rita Cyan", "Steve Magenta", "Tina Lavender", 
+#            "Uma Coral", "Victor Indigo", "Wendy Peach", "Xander Mint", "Yara Plum", 
+#            "Zoe Gold", "Aaron Silver", "Bella Bronze", "Cody Ruby", "Daisy Emerald")
+# 
+# age_groups <- c("1_18", "18_30", "30_45", "45_65", "65_99")
+# genders <- c("male", "female", "non_binary", "other_dont_specify", "other_specify")
+# cities <- c("London", "Berlin", "Paris", "Madrid", "Rome", 
+#             "Amsterdam", "Brussels", "Vienna", "Lisbon", "Prague")
+# education_levels <- c("school", "high_school", "bsc", "msc", "phd")
+# institution_types <- c("public", "private", "academic", "ngo")
+# institution_names <- c("Institute A", "Company B", "University C", "Organization D", 
+#                        "Agency E", "School F", "Corporation G", "NGO H")
+# conference_topics <- c("topic1", "topic2", "topic3", "topic4", "other_topic")
+# conference_medias <- c("media1", "media2", "media3", "media4", "other_media")
+# 
+# # Simulate data
+# conference_attendees_fake <- data.frame(
+#    person_name = sample(names, 30, replace = TRUE),
+#    person_age = sample(age_groups, 30, replace = TRUE),
+#    person_gender = sample(genders, 30, replace = TRUE),
+#    person_city = sample(cities, 30, replace = TRUE),
+#    person_education = sample(education_levels, 30, replace = TRUE),
+#    institution_type = sample(institution_types, 30, replace = TRUE),
+#    institution_name = sample(institution_names, 30, replace = TRUE),
+#    conference_topic = sapply(1:30, function(x) {
+#       paste(sample(conference_topics, sample(1:3, size = 1), replace = FALSE), collapse = ",")
+#    }),
+#    conference_media = sapply(1:30, function(x) {
+#       paste(sample(conference_medias, sample(1:3, size = 1), replace = FALSE), collapse = ",")
+#    })
+# )
+
+# Real Data ####
+
+# column names: person_name	person_phone	person_email	person_age	institution_type	institution_name	institution_role	conference_media	conference_media_other	person_gender	person_gender_other	person_city	person_country	person_education	conference_topic	conference_topic_other
+
+library(readxl)
+library(stringr)
+
+conference_attendees = read_excel(last_data) |>
+   mutate(
+      institution_name = toupper(institution_name) |>
+         str_remove_all('"') |>
+         str_remove_all('\\.') |>
+         str_replace_all("-", " ") |>
+         str_replace_all("Á", "A") |>
+         str_replace_all("É", "E") |>
+         str_replace_all("Í", "I") |>
+         str_replace_all("Ó", "O") |>
+         str_replace_all("Ú", "U") |>
+         str_squish(),
+      institution_name = institution_name |>
+         case_match(
+            "DIRECCION DE AVALUOS Y CATASTROS" ~ "GAD MANTA",
+            "ESCUELA SUPERIOR POLITECNICA AGROPECUARIA DE MANABI" ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICA AGROPECUARIA DE MANABI MANUEL FELIX LOPEZ" ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICA AGROPECUARIA DE MANABI MANUEL FELIX LOPEZ (ESPAM MFL)" ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICA AGROPECUARIA DE MANABI MANUEL FELIX LOPEZ ESPAM.MFL" ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICA AGROPECUARIA DE MANABI MANUEL FELIX LOPEZ ESPAMMFL" ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICA AGROPECUARIA DE MANABI MANUEL FELIX LOPEZ," ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICA AGROPECUARIA DE MANABI MFL" ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICA DE MANABI MANUEL FELIX LOPEZ" ~ "ESPAM MFL",
+            "ESCUELA SUPERIOR POLITECNICO AGROPECUARIA DE MANABI MANUEL FELIX LOPEZ" ~ "ESPAM MFL",
+            "ESPAM" ~ "ESPAM MFL",
+            "GAD MUNICIPAL DE LAGO AGRIO" ~ "GAD LAGO AGRIO",
+            "GAD MUNICIPAL JIPIJAPA" ~ "GAD JIPIJAPA",
+            "GAD MUNICIPAL PORTOVIEJO" ~ "GAD PORTOVIEJO",
+            "GAD MUNICIPIO DE MONTECRISTI" ~ "GAD MONTECRISTI",
+            "GADM EL CARMEN" ~ "GAD EL CARMEN",
+            "GADCCALVAS" ~ "GAD CALVAS",
+            "GADM MANTA" ~ "GAD MANTA",
+            "GADM PORTOVIEJO" ~ "GAD PORTOVIEJO",
+            "GADM SUCRE" ~ "GAD SUCRE",
+            "GAS JIPIJAPA" ~ "GAD JIPIJAPA",
+            "GOBIERNO AUTONOMO DESCENTRALIZADO DEL CANTON MANTA" ~ "GAD MANTA",
+            "GOBIERNO AUTONOMO DESCENTRALIZADO DEL CANTON SUCRE" ~ "GAD SUCRE",
+            "GOBIERNO AUTONOMO DESCENTRALIZADO MANTA" ~ "GAD MANTA",
+            "GOBIERNO AUTONOMOS DESCENTRALIZADO TOSAGUA" ~ "GAD TOSAGUA",
+            "MINISTERIO DE SALUD PUBLICA DEL ECUADOR" ~ "MINISTERIO DE SALUD PUBLICA",
+            "MUNICIPIO" ~ "GAD MANTA",
+            "MUNICIPIO DE MANTA" ~ "GAD MANTA",
+            "MUNICIPIO DE SANTA ELENA" ~ "GAD SANTA ELENA",
+            "SECRETARIA NACIONAL DE GESTION DE RIESGOS" ~ "SNGR",
+            "UNIVERSIDAD LAICA ELOY ALFARO DE MANABI" ~ "ULEAM",
+            "UTM" ~ "UNIVERSIDAD TECNICA DE MANABI",
+            "NINGUNA" ~ NA,
+            "PRIVADO" ~ NA,
+            "ABOGADA EN EL LIBRE EJERCICIO DE LA PROFESION" ~ NA,
+            "CONSULTOR AMBIENTAL" ~ NA,
+            "GAD PROVINCIAL" ~ "GOBIERNO PROVINCIAL DE SANTO DOMINGO",
+            "GOBIERNO AUTONOMO DESCENTRALIZADO DEL CANTON PORTOVIEJO" ~ "GAD PORTOVIEJO",
+            #"EP AGUAS DE MANTA" ~ "GAD MANTA",
+            .default = institution_name
+         ),
+      institution_type = institution_type |>
+         case_match(
+            "publica"  ~ "Institución pública",
+            "privada"  ~ "Institución privada",
+            "academia" ~ "Academia",
+            "ong"      ~ "Organización No Gubernamental",
+            "civil"    ~ "Sociedad civil"
+         ),
+      person_city = toupper(person_city),
+      person_city = person_city |>
+         case_match(
+            "ABDÓN CALDERÓN"      ~ "MANTA",
+            "BAHIA DE CARAQUEZ"   ~ "SUCRE",
+            "BAHÍA DE CARAQUEZ"   ~ "SUCRE",
+            "BARRIO LA DOLOROSA"  ~ "MANTA",
+            "BOLIVAR"             ~ "BOLÍVAR",
+            "CALCETA"             ~ "BOLÍVAR",
+            "CALCETA - MANABÍ"    ~ "BOLÍVAR",
+            "CALCETA -MANABÍ"     ~ "BOLÍVAR",
+            "CANTÓN PICHINCHA"    ~ "PICHINCHA",
+            "CENTRO DE MANTA"     ~ "MANTA",
+            "JIOIJAPA"            ~ "JIPIJAPA",
+            "LA AURORA"           ~ "MANTA",
+            "LA UMIÑA"            ~ "MANTA",
+            "LAGO AGRIO"          ~ "NUEVA LOJA",
+            "LAS ACACIAS"         ~ "MANTA",
+            "LOS ESTEROS"         ~ "MANTA",
+            "MANTA MANABI"        ~ "MANTA",
+            "PORTOVIEJO, UNIVERSIDAD TÉCNICA DE MANABÍ." ~ "PORTOVIEJO",
+            "PUERTO LOPEZ-AYAMPE" ~ "PUERTO LOPEZ",
+            "SAMBORONDOM"         ~ "SAMBORONDÓN",
+            "SAN LORENZO"         ~ "MANTA",
+            "SANTA ELENA -LA LIBERTAD" ~ "LA LIBERTAD",
+            "SI VIVIENDA"         ~ "MANTA",
+            "TOSAGUA MANABÍ"      ~ "TOSAGUA",
+            "VÍA SAN MATEO"       ~ "MANTA",
+            "CIUDADELA LOS ELÉCTRICOS" ~ "MANTA",
+            .default = person_city
+         ),
+      person_age = person_age |>
+         case_match(
+            "e18"    ~ "< 18 años",
+            "e18_30" ~ "18 - 30 años",
+            "e30_45" ~ "30 - 45 años",
+            "e45_65" ~ "45 - 65 años",
+            "e65"    ~ "> 65 años"
+         ),
+      person_education = person_education |>
+         case_match(
+            "Tercer"    ~ "Tercer Nivel",
+            "Cuarto"    ~ "Cuarto Nivel",
+            .default = person_education
+         ),
+      conference_topic = conference_topic |>
+         str_replace("riesgos_sismicos", "Riesgos sísmicos en\nciudades costeras") |>
+         str_replace("riesgos_climaticos", "Riesgos climáticos") |>
+         str_replace("planificacion_resiliencia", "Planificación y\nresiliencia territorial") |>
+         str_replace("gestion_academia", "Gestión de la\nacademia para la RRD") |>
+         str_replace("other", "otro tema"),
+      conference_media = conference_media |>
+         str_replace("gadm", "redes sociales del\nGADM Manta") |>
+         str_replace("iipp", "redes sociales de otra\ninstitución pública") |>
+         str_replace("ins",  "a través de la institución\na la que pertenece") |>
+         str_replace("recomendacion", "recomendación de otro\nprofesional") |>
+         str_replace("other", "otro medio")
+   )
+
+###
+
+# Data Preparation ####
+total_people <- nrow(conference_attendees)
+total_male <- nrow(filter(conference_attendees, person_gender == "masculino"))
+total_female <- nrow(filter(conference_attendees, person_gender == "femenino"))
+distinct_cities <- n_distinct(conference_attendees$person_city)
+distinct_institutions <- n_distinct(filter(conference_attendees, ! is.na(institution_name))$institution_name)
+
+# Age Range Proportions
+age_distribution <- conference_attendees %>%
+  group_by(person_age) %>%
+  summarise(count = n())
+
+# Education Level Proportions
+education_distribution <- conference_attendees %>%
+  group_by(person_education) %>%
+  summarise(count = n())
+
+# Top 5 Cities
+top_cities <- conference_attendees %>%
+  group_by(person_city) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) #%>% head(5)
+
+# Top 5 Institutions
+top_institutions <- conference_attendees %>%
+  filter(! is.na(institution_name)) %>%
+  group_by(institution_name) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) #%>% head(5)
+
+# Institution Type Proportions
+institution_type_distribution <- conference_attendees %>%
+  group_by(institution_type) %>%
+  summarise(count = n()) %>%
+  ungroup()
+
+# Topic Interests
+topic_counts <- conference_attendees %>%
+  separate_rows(conference_topic, sep = ",") %>%
+  group_by(conference_topic) %>%
+  summarise(count = n())
+
+# Media Interests
+media_counts <- conference_attendees %>%
+  separate_rows(conference_media, sep = ",") %>%
+  group_by(conference_media) %>%
+  summarise(count = n())
+
+# Cities map
+library(sf)
+library(leaflet)
+library(RColorBrewer)
+
+admin = st_read(admin_layer) |>
+   left_join(top_cities, by = c("CANTON" = "person_city")) |>
+   arrange(desc(count))
+
+mypal <- colorBin(palette = "Blues", domain = admin$count, na.color = "#bbbbbb", bins = c(1,3,10,30,100))
+mylab <- paste("<strong>", admin$CANTON, "<br/>", ifelse(is.na(admin$count), 0, admin$count), "inscritos",
+               "</strong>") %>% lapply(htmltools::HTML)
+
+# library(ggplot2)
+# admin_plot = ggplot(admin, aes(fill = count, text = str_c(CANTON, ": ", count))) +
+#    geom_sf(color = NA) + scale_fill_binned() + theme_void()
+# ggplotly(admin_plot)
+```
+
+## Row1 {data-height=100}
+
+### TOTAL ASISTENTES
+
+```{r}
+# Metrics
+valueBox(0, icon = "fa-square-check")
+```
+
+### TOTAL INSCRITOS
+
+```{r}
+# Metrics
+valueBox(total_people, icon = "fa-rectangle-list")
+```
+
+### HOMBRES
+
+```{r}
+# Metrics
+valueBox(total_male, icon = "fa-person")
+```
+
+### MUJERES
+
+```{r}
+# Metrics
+valueBox(total_female, icon = "fa-person-dress")
+```
+
+### INSTITUCIONES
+
+```{r}
+# Metrics
+valueBox(distinct_institutions, icon = "fa-building")
+```
+
+### CANTONES
+
+```{r}
+# Metrics
+valueBox(distinct_cities, icon = "fa-city")
+```
+
+## Row2 {data-height=300}
+
+### Porcentaje de inscritos por tipo de institución donde trabaja
+
+```{r}
+# Pie Plot for Institution Type Distribution
+plot_ly(institution_type_distribution, labels = ~institution_type, values = ~count, type = 'pie')
+```
+
+### Porcentaje de inscritos por rangos de edades
+
+```{r}
+# Pie Plot for Age Distribution
+plot_ly(age_distribution, labels = ~person_age, values = ~count, type = 'pie')
+```
+
+### Porcentaje de inscritos por nivel de instrucción formal
+
+```{r}
+# Pie Plot for Education Level Distribution
+plot_ly(education_distribution, labels = ~person_education, values = ~count, type = 'pie')
+```
+
+## Row3 {data-height=500}
+
+### Número de inscritos por institución donde trabaja
+
+```{r}
+# Table for Top 5 Institutions
+DT::datatable(top_institutions, colnames = c("INSTITUCIÓN", "INSCRITOS"), options = list(bPaginate=FALSE))
+```
+
+### Número de inscritos por cantón de residencia
+
+```{r}
+# Table for Top 5 Cities
+# DT::datatable(top_cities, colnames = c("CANTÓN", "INSCRITOS"), options = list(bPaginate=FALSE))
+leaflet(admin, options = leafletOptions(minZoom = 6, maxZoom = 10)) %>%
+  addPolygons(fillColor =~mypal(count), fillOpacity=1, color="#dddddd", opacity=1, weight=1, label =~mylab) %>%
+  addLegend(pal = mypal, values = ~count, opacity = 1, title = "No. inscritos", position = "bottomright")
+```
+
+### Número de inscritos que han indicado interés por cada tema
+
+```{r}
+# Bar Plot for Topic Interests
+plot_ly(topic_counts, x = ~conference_topic, y = ~count, type = 'bar') %>%
+  layout(xaxis = list(title = list(text = "")), yaxis = list(title = list(text = "")))
+```
