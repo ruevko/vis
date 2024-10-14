@@ -74,6 +74,7 @@ conference_attendees = read_excel(last_data) |>
    mutate(
       institution_name = toupper(institution_name) |>
          str_remove_all('"') |>
+         str_remove_all(',') |>
          str_remove_all('\\.') |>
          str_replace_all("-", " ") |>
          str_replace_all("Á", "A") |>
@@ -122,6 +123,9 @@ conference_attendees = read_excel(last_data) |>
             "CONSULTOR AMBIENTAL" ~ NA,
             "GAD PROVINCIAL" ~ "GOBIERNO PROVINCIAL DE SANTO DOMINGO",
             "GOBIERNO AUTONOMO DESCENTRALIZADO DEL CANTON PORTOVIEJO" ~ "GAD PORTOVIEJO",
+            "MANTA 2000" ~ "GAD MANTA",
+            "MANTA - MARBELLA" ~ "GAD MANTA",
+            "MANABI" ~ "GAD MANTA",
             #"EP AGUAS DE MANTA" ~ "GAD MANTA",
             .default = institution_name
          ),
