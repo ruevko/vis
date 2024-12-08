@@ -8,3 +8,4 @@ date: "`r Sys.Date()`"
 
 [Construyendo Ciudades Costeras Resilientes con una Perspectiva Multinivel | Dashboard de evento](foro2024-evento)
 
+[Reunión Navideña de PALESTRA FITNESS](palestra2024)

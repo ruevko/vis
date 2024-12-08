@@ -1,0 +1,89 @@
+---
+title: "Reunión Navideña de PALESTRA FITNESS (última actualización: `r format(Sys.time(), '%Y-%m-%d %H:%M')`)"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(DT)
+library(dplyr)
+library(plotly)
+library(stringr)
+library(googlesheets4)
+
+gs4_deauth()
+
+data = read_sheet("https://docs.google.com/spreadsheets/d/1mQyxBp6wgR6XBz1lgZkEgu0j5YVEy5qE-ovZoCca-rQ")
+
+data = mutate(data,
+   `Personas registradas` = str_c(str_to_title(Nombres), " ", str_to_title(Apellidos)),
+   `¿Cuál debería ser el valor aproximado del regalo para el amigo secreto?` = str_c(
+      "$", `¿Cuál debería ser el valor aproximado del regalo para el amigo secreto?`),
+   `¿Cuál opción de menú va a pedir?` = str_to_upper(`¿Cuál opción de menú va a pedir?
+(si prefiere un plato a la carta, escríbalo en la opción "Otros")`)
+)
+
+data_n <- nrow(data)
+
+data_horario <- data %>%
+   group_by(Horario) %>%
+   summarise(count = n())
+
+data_jugar <- data %>%
+   group_by(`¿Desea jugar al amigo secreto?`) %>%
+   summarise(count = n())
+
+data_valor <- data %>%
+   filter(! is.na(`¿Cuál debería ser el valor aproximado del regalo para el amigo secreto?`)) %>%
+   group_by(`¿Cuál debería ser el valor aproximado del regalo para el amigo secreto?`) %>%
+   summarise(count = n())
+
+data_menu <- data %>%
+   group_by(`¿Cuál opción de menú va a pedir?`) %>%
+   summarise(count = n())
+```
+
+## Row2 {data-height=500}
+
+### Total de personas registradas
+
+```{r}
+flexdashboard::valueBox(data_n, icon = "fa-person")
+```
+
+### Porcentaje de personas por horario
+
+```{r}
+plot_ly(data_horario, labels = ~Horario, values = ~count, type = 'pie')
+```
+
+### ¿Cuál opción de menú va a pedir?
+
+```{r}
+plot_ly(data_menu, labels = ~`¿Cuál opción de menú va a pedir?`, values = ~count, type = 'pie')
+```
+
+## Row3 {data-height=500}
+
+### Personas registradas
+
+```{r}
+select(data, `Personas registradas`) |>
+   arrange(`Personas registradas`) |>
+   datatable(options = list(bPaginate=FALSE))
+```
+
+### ¿Desea jugar al amigo secreto?
+
+```{r}
+plot_ly(data_jugar, labels = ~`¿Desea jugar al amigo secreto?`, values = ~count, type = 'pie')
+```
+
+### ¿Cuál debería ser el valor aproximado del regalo para el amigo secreto?
+
+```{r}
+plot_ly(data_valor, labels = ~`¿Cuál debería ser el valor aproximado del regalo para el amigo secreto?`,
+        values = ~count, type = 'pie')
+```
