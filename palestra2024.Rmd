@@ -1,5 +1,5 @@
 ---
-title: "Reunión Navideña de PALESTRA FITNESS (última actualización: `r format(Sys.time(), '%Y-%m-%d %H:%M')`)"
+title: "Reunión Navideña de PALESTRA FITNESS (última actualización: `r format(Sys.time()-18e3, '%Y-%m-%d %H:%M')`)"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows

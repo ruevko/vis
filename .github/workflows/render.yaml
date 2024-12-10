@@ -5,8 +5,8 @@ env:
 
 on:
   workflow_dispatch
-#  schedule:
-#    - cron: '1 23 * * *'
+  schedule:
+    - cron: '1 23 * * *'
 
 jobs:
   main:
