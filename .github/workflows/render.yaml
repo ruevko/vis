@@ -14,8 +14,8 @@ jobs:
     steps:
     - name: Install libcurl
       run: |
-        sudo apt update
-        sudo apt install libcurl4-openssl-dev
+        sudo apt-get update
+        sudo apt-get install libcurl4-openssl-dev
     - name: Install pandoc
       uses: r-lib/actions/setup-pandoc@v2
       with:
@@ -35,6 +35,7 @@ jobs:
     - name: Commmit repository
       run: |
         export TIMESTAMP=$(date +%y-%m-%d-%H-%M)
-        git config user.email "github-actions@github.com"
+        git config user.name 'github-actions'
+        git config user.email 'github-actions@github.com'
         git add docs && git commit -m "Rendered $TIMESTAMP"
         git push
