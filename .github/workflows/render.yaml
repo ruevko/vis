@@ -1,0 +1,32 @@
+name: Rendering workflow
+
+env:
+  RENV_PATHS_ROOT: ~/.cache/R/renv
+
+on:
+  workflow_dispatch
+#  schedule:
+#    - cron: '1 23 * * *'
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Cache packages
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.RENV_PATHS_ROOT }}
+        key: renv-${{ hashFiles('renv.lock') }}
+        restore-keys: renv-
+    - name: Restore packages
+      run: Rscript -e 'renv::restore()'
+    - name: Render
+      run: Rscript rende.R
+    - name: Commmit repository
+      run: |
+        export TIMESTAMP=$(date +%y-%m-%d-%H-%M)
+        git config user.email "github-actions@github.com"
+        git add docs && git commit -m "Rendered $TIMESTAMP"
+        git push
