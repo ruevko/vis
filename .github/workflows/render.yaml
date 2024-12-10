@@ -12,6 +12,10 @@ jobs:
   main:
     runs-on: ubuntu-latest
     steps:
+    - name: Install libcurl
+      run: |
+        sudo apt update
+        sudo apt install libcurl4-openssl-dev
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Cache packages
